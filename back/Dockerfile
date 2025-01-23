@@ -1,23 +1,28 @@
-FROM php:8.2-apache
+FROM php:8.2-fpm
 
+# Installe les extensions PHP nécessaires
 RUN apt-get update && apt-get install -y \
-    git \
-    unzip \
+    git\
+    libicu-dev \
+    libpq-dev \
     libzip-dev \
-    libonig-dev \
-    libxml2-dev \
-    && docker-php-ext-install pdo_mysql zip mbstring xml
+    unzip \
+    && docker-php-ext-install intl pdo pdo_mysql zip
 
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Installe Composer
+COPY --from=composer:2.6 /usr/bin/composer /usr/bin/composer
 
-WORKDIR /var/www/html
+# Configure le répertoire de travail
+WORKDIR /app
+
+# Copie des fichiers du projet Symfony
 COPY . .
 
-RUN composer install --optimize-autoloader --no-dev
+# Installe les dépendances Symfony
+RUN composer install --no-dev --optimize-autoloader
 
-RUN a2enmod rewrite
-COPY .docker/apache.conf /etc/apache2/sites-available/000-default.conf
-
+# Définit le port exposé
 EXPOSE 8000
 
-CMD ["apache2-foreground"]
+# Commande par défaut pour démarrer le serveur Symfony
+CMD ["php", "-S", "0.0.0.0:8000", "-t", "public"]
